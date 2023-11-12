@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Red Social Mínima</title>
+  </head>
+  <body>
+    <h1>Bienvenido, {{ username }}!</h1>
+
+    <form id="chatForm">
+      <select id="groupSelect" name="groupSelect">
+        {% for group in user_groups %}
+        <option value="{{ group.group.id }}">{{ group.group.name }}</option>
+        {% endfor %}
+      </select>
+      <input
+        id="messageInput"
+        autocomplete="off"
+        placeholder="Escribe un mensaje..."
+      />
+      <input type="submit" value="Enviar" />
+    </form>
+
+    <ul id="messages"></ul>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.3/socket.io.js"></script>
+    <script>
+      var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+      $(function () {
+          $('form#chatForm').submit(function (event) {
+              event.preventDefault();
+              var group_id = $('#groupSelect').val();
+              socket.emit('message', {'msg': $('#messageInput').val(), 'group_id': group_id});
+              $('#messageInput').val('');
+              return false;
+          });
+
+          socket.on('message', function (data) {
+              $('#messages').append('<li><strong>' + data.username + '</strong>: ' + data.msg + '</li>');
+          });
+      });
+    </script>
+  </body>
+</html>

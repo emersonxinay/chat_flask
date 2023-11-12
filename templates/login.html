@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Iniciar Sesión</title>
+  </head>
+  <body>
+    <h1>Iniciar Sesión</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %} {% for category, message in messages %}
+    <div class="alert alert-{{ category }}">{{ message }}</div>
+    {% endfor %} {% endif %} {% endwith %}
+
+    <form method="POST">
+      {{ form.hidden_tag() }}
+      <div>{{ form.username.label }} {{ form.username }}</div>
+      <div>{{ form.password.label }} {{ form.password }}</div>
+      <div>{{ form.submit }}</div>
+    </form>
+
+    <p>
+      ¿No tienes una cuenta? <a href="{{ url_for('register') }}">Registrarse</a>
+    </p>
+  </body>
+</html>
