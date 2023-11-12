@@ -7,13 +7,9 @@
   </head>
   <body>
     <h1>Bienvenido, {{ username }}!</h1>
+    <button onclick="logout()">Cerrar sesión</button>
 
-    <form id="chatForm">
-      <select id="groupSelect" name="groupSelect">
-        {% for group in user_groups %}
-        <option value="{{ group.group.id }}">{{ group.group.name }}</option>
-        {% endfor %}
-      </select>
+    <form id="chatForm" onsubmit="sendMessage(); return false;">
       <input
         id="messageInput"
         autocomplete="off"
@@ -22,26 +18,62 @@
       <input type="submit" value="Enviar" />
     </form>
 
+    <div>
+      <h3>Mensajes anteriores:</h3>
+      <ul id="message-list">
+        {% for message in messages %}
+        <li>
+          {{ message.content }} - {{ message.timestamp }} ({{
+          message.user.username }})
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
     <ul id="messages"></ul>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.3/socket.io.js"></script>
+
     <script>
-      var socket = io.connect('http://' + document.domain + ':' + location.port);
+        function logout() {
+          socket.emit('logout');  // Emitir evento de logout
+      }
 
-      $(function () {
-          $('form#chatForm').submit(function (event) {
-              event.preventDefault();
-              var group_id = $('#groupSelect').val();
-              socket.emit('message', {'msg': $('#messageInput').val(), 'group_id': group_id});
-              $('#messageInput').val('');
-              return false;
+          var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+          socket.on('all_messages', function(data) {
+              var messageList = document.getElementById('message-list');
+              messageList.innerHTML = '';  // Limpiar la lista actual de mensajes
+
+              data.forEach(function(message) {
+                  var listItem = document.createElement('li');
+                  listItem.appendChild(document.createTextNode(message.username + ': ' + message.content));
+                  messageList.appendChild(listItem);
+              });
           });
 
-          socket.on('message', function (data) {
-              $('#messages').append('<li><strong>' + data.username + '</strong>: ' + data.msg + '</li>');
+          socket.on('message', function(data) {
+              var messageList = document.getElementById('message-list');
+              var listItem = document.createElement('li');
+              listItem.appendChild(document.createTextNode(data.username + ': ' + data.msg));
+              messageList.appendChild(listItem);
           });
-      });
+
+          function sendMessage() {
+              var messageInput = document.getElementById('messageInput');
+              var message = messageInput.value.trim();
+
+              if (message !== '') {
+                  socket.emit('message', message);
+                  messageInput.value = '';
+              }
+          }
+
+          socket.on('user_disconnected', function(data) {
+            alert(data.username + ' ha cerrado sesión.');
+            // Puedes realizar otras operaciones, como eliminar el nombre de usuario de la lista de usuarios conectados.
+        });
     </script>
   </body>
 </html>
