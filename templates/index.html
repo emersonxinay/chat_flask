@@ -24,7 +24,9 @@
         {% for message in messages %}
         <li>
           {{ message.content }} - {{ message.timestamp }} ({{
-          message.user.username }})
+          message.user.username }}) {% if message.user.id == current_user.id %}
+          <button onclick="deleteMessage({{ message.id }})">Eliminar</button>
+          {% endif %}
         </li>
         {% endfor %}
       </ul>
@@ -37,43 +39,60 @@
 
     <script>
         function logout() {
-          socket.emit('logout');  // Emitir evento de logout
+          // Emitir una señal al servidor para cerrar la sesión
+          socket.emit('logout');
       }
 
-          var socket = io.connect('http://' + document.domain + ':' + location.port);
+            var socket = io.connect('http://' + document.domain + ':' + location.port);
 
-          socket.on('all_messages', function(data) {
-              var messageList = document.getElementById('message-list');
-              messageList.innerHTML = '';  // Limpiar la lista actual de mensajes
+            socket.on('all_messages', function(data) {
+                var messageList = document.getElementById('message-list');
+                messageList.innerHTML = '';  // Limpiar la lista actual de mensajes
 
-              data.forEach(function(message) {
-                  var listItem = document.createElement('li');
-                  listItem.appendChild(document.createTextNode(message.username + ': ' + message.content));
-                  messageList.appendChild(listItem);
-              });
+                data.forEach(function(message) {
+                    var listItem = document.createElement('li');
+                    listItem.appendChild(document.createTextNode(message.username + ': ' + message.content));
+                    messageList.appendChild(listItem);
+                });
+            });
+
+            socket.on('message', function(data) {
+                var messageList = document.getElementById('message-list');
+                var listItem = document.createElement('li');
+                listItem.appendChild(document.createTextNode(data.username + ': ' + data.msg));
+                messageList.appendChild(listItem);
+            });
+            socket.on('logout_confirmation', function() {
+              // Redirigir a la página de inicio de sesión después de cerrar sesión
+              window.location.href = '/login';
           });
 
-          socket.on('message', function(data) {
-              var messageList = document.getElementById('message-list');
-              var listItem = document.createElement('li');
-              listItem.appendChild(document.createTextNode(data.username + ': ' + data.msg));
-              messageList.appendChild(listItem);
+            function sendMessage() {
+                var messageInput = document.getElementById('messageInput');
+                var message = messageInput.value.trim();
+
+                if (message !== '') {
+                    socket.emit('message', message);
+                    messageInput.value = '';
+                }
+            }
+
+            socket.on('user_disconnected', function(data) {
+              alert(data.username + ' ha cerrado sesión.');
+              // Puedes realizar otras operaciones, como eliminar el nombre de usuario de la lista de usuarios conectados.
           });
+          socket.on('message_deleted', function(data) {
+            var messageId = data.messageId;
+            var messageElement = document.getElementById('message_' + messageId);
 
-          function sendMessage() {
-              var messageInput = document.getElementById('messageInput');
-              var message = messageInput.value.trim();
-
-              if (message !== '') {
-                  socket.emit('message', message);
-                  messageInput.value = '';
-              }
-          }
-
-          socket.on('user_disconnected', function(data) {
-            alert(data.username + ' ha cerrado sesión.');
-            // Puedes realizar otras operaciones, como eliminar el nombre de usuario de la lista de usuarios conectados.
+            if (messageElement) {
+                messageElement.style.display = 'none';
+            }
         });
+
+          function deleteMessage(messageId) {
+            socket.emit('delete_message', { messageId: messageId });
+        }
     </script>
   </body>
 </html>

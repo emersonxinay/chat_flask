@@ -22,11 +22,13 @@ class User(db.Model, UserMixin):
     username = db.Column(db.String(20), unique=True, nullable=False)
     password = db.Column(db.String(60), nullable=False)
 
+
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.String(200), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    is_deleted = db.Column(db.Boolean, default=False)
     user = db.relationship('User', backref='messages', lazy=True)
 
 @login_manager.user_loader
@@ -99,6 +101,13 @@ def logout():
     flash('Has cerrado sesión correctamente.', 'success')
     return redirect(url_for('login'))
 
+@socketio.on('logout')
+@login_required
+def handle_logout():
+    logout_user()
+    print('Usuario desconectado')  # Para depuración
+    return redirect(url_for('login'))  # Redirigir a la página de inicio de sesión
+
 @socketio.on('connect')
 def handle_connect():
     messages = Message.query.all()
@@ -113,6 +122,8 @@ def handle_message(msg):
     db.session.commit()
 
     emit('message', {'msg': msg, 'username': current_user.username}, broadcast=True)
+    
+
 
 @socketio.on('logout')
 @login_required
@@ -120,6 +131,18 @@ def handle_logout():
     username = current_user.username
     logout_user()
     emit('user_disconnected', {'username': username}, broadcast=True)
+
+@socketio.on('delete_message')
+@login_required
+def handle_delete_message(data):
+    message_id = data.get('messageId')
+    message = Message.query.get(message_id)
+
+    if message and message.user_id == current_user.id:
+        message.is_deleted = True
+        db.session.commit()
+
+        emit('message_deleted', {'messageId': message_id}, broadcast=True)
 
 
 if __name__ == '__main__':
