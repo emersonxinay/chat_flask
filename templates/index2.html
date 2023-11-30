@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Chat en tiempo real</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+
+<body>
+  <ul id="messages"></ul>
+  <input id="message_input" autocomplete="off" /><button onclick="sendMessage()">Enviar</button>
+
+  <script>
+    var socket = io();
+    socket.on('message', function (data) {
+      $('#messages').append($('<li>').text(data));
+    });
+
+    function sendMessage() {
+      var message = $('#message_input').val();
+      socket.emit('message', message);
+      $('#message_input').val('');
+    }
+  </script>
+</body>
+
+</html>
